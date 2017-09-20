@@ -49,7 +49,7 @@
         <canvas id="ar-scene"></canvas>  
     </div>
 
-    <div id="button">点击送关爱</div>
+    <div id="button">让世界充满爱</div>
     
     <script src="./lib/three.min.js"></script>
     <script>
@@ -68,7 +68,7 @@
             canvas.height = HEIGHT * 2;
             
 
-            // WebRTC 调用摄像头 IOS 11 支持，仅适用与 https 请求
+            // WebRTC 调用摄像头 IOS 11 支持，仅适用与 safari浏览器 https 请求
             navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia; 
             if ( navigator.getUserMedia ) {
                 var constraints = {
@@ -99,7 +99,6 @@
             camera.position.x = 0;
             camera.position.z = 5;
             camera.position.y = 1;  
-
 
             // 创建帽体
             const geometry_hat = new THREE.SphereGeometry( 1, 16, 16, 0, PI2, 0, PI * 0.5 );
@@ -144,9 +143,12 @@
                 var alpha = event.alpha;
                 var beta = event.beta;
                 var gamma = event.gamma;
-                camera.rotation.x = beta * exUnit;
-                camera.rotation.y = gamma * exUnit;
-                camera.rotation.z = alpha * exUnit;
+                const rX = beta * exUnit,
+                        rY = gamma * exUnit,
+                        rZ = alpha * exUnit;
+                camera.rotation.set( rX, rY, rZ );
+                hat.rotation.set( rX, rY, rZ );
+                bongrace.rotation.set( rX + PI/2, rY, rZ + PI/2 );
             });
 
             // 按钮点击事件
