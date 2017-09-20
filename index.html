@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Web-RTC</title>
+    <style>
+        html,body{
+            overflow: hidden;
+        }
+        body{
+            padding: 0;
+            margin: 0;
+        }
+        body{
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            
+        }
+        #ar-scene{
+            position: absolute;
+            left: -50%;
+            top: -50%;
+            transform: scale(0.5 0.5);
+        }
+        #button{
+            position: absolute;
+            left: 50%;
+            margin-left: -100px;
+            bottom: 20px;
+            width: 200px;
+            height: 40px;
+            line-height: 40px;
+            cursor: pointer;
+            background-color: darkcyan;
+            box-shadow: 0px 0px 5px darkcyan;
+            color: #fff;
+            text-align: center;
+            z-index: 99;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+    <div id="mainContainer">
+        <video src="" autoplay muted playsinline></video>
+        <canvas id="ar-scene"></canvas>  
+    </div>
+
+    <div id="button">点击送关爱</div>
+    
+    <script src="./lib/three.min.js"></script>
+    <script>
+
+       window.onload = function(){
+            var WIDTH = window.innerWidth,
+                    HEIGHT = window.innerHeight;
+            var button = document.getElementById('button');
+            var video = document.querySelector("video");
+            var canvas = document.getElementById("ar-scene");
+
+            video.width = WIDTH;
+            video.height = HEIGHT;
+
+            canvas.width = WIDTH * 2;
+            canvas.height = HEIGHT * 2;
+            
+
+            // WebRTC 调用摄像头 IOS 11 支持，仅适用与 https 请求
+            navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia; 
+            if ( navigator.getUserMedia ) {
+                var constraints = {
+                    audio: false,
+                    video: {
+                            facingMode: { exact: "environment" }
+                        }
+                }
+                navigator.mediaDevices.getUserMedia(constraints).then(function success(stream) {
+                    video.srcObject = stream;
+                });
+            }
+            
+            //---------------------------ThreeJs部分-----------------------------------
+            
+            // 全局常量 PI
+            const PI = Math.PI,
+                    PI2 = PI * 2;
+
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, WIDTH / HEIGHT, 1, 1000);
+            const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, preserveDrawingBuffer: true, canvas: canvas });
+            
+            //设置canvas背景色(clearColor)和背景色透明度（clearAlpha）  
+            renderer.setClearColor( 0xffffff, 0);  
+
+            // 设置相机位置
+            camera.position.x = 0;
+            camera.position.z = 5;
+            camera.position.y = 1;  
+
+
+            // 创建帽体
+            const geometry_hat = new THREE.SphereGeometry( 1, 16, 16, 0, PI2, 0, PI * 0.5 );
+            const material_hat = new THREE.MeshBasicMaterial( { 
+                    color: 'darkcyan',
+                    wireframe: false
+                } );
+            const hat = new THREE.Mesh( geometry_hat, material_hat );
+            hat.position.set(camera.position);
+            scene.add( hat );
+
+             // 创建帽延
+            const geometry_bongrace = new THREE.TorusGeometry( 0.9, 0.8, 2, 10, PI );
+            const material_bongrace = new THREE.MeshBasicMaterial( { 
+                    color: 'darkcyan',
+                    wireframe: false
+                } );
+            const bongrace = new THREE.Mesh( geometry_bongrace, material_bongrace );
+            bongrace.position.set(camera.position);
+            bongrace.rotation.z = PI/2;
+            bongrace.rotation.x = PI/2;
+            scene.add( bongrace );
+
+            // 创建 环境光
+            const ambientLight = new THREE.AmbientLight( 0x000000 );
+            scene.add( ambientLight );
+
+
+            // -----------每一帧执行渲染动画----------------
+            function render() {
+                // 中心球体自转
+                move();
+                renderer.render( scene, camera );
+                // 每一帧执行动画
+                requestAnimationFrame( render );
+            }
+            render();
+
+            // 移动端 陀螺仪 绑定 相机 旋转
+            var exUnit = PI / 180;
+            window.addEventListener('deviceorientation', function( event ){
+                var alpha = event.alpha;
+                var beta = event.beta;
+                var gamma = event.gamma;
+                camera.rotation.x = beta * exUnit;
+                camera.rotation.y = gamma * exUnit;
+                camera.rotation.z = alpha * exUnit;
+            });
+
+            // 按钮点击事件
+            let target = null;
+            button.addEventListener('click', function(){
+                if ( !hat._target ) {
+                    const _depth = 10,
+                            _direction = camera.getWorldDirection(),
+                            { x, y, z} = _direction;
+                    target = {x: x * _depth, y: y * _depth, z: z * _depth, dev: 0};
+                    hat._target = target;
+                }
+            });
+
+            function move() {
+                if ( hat._target ) {
+                    let { dev } = hat._target;
+                    if( dev < PI * 0.5 ){
+                        dev += 0.05;
+                        const { x, y, z } = hat._target,
+                                v = Math.sin(dev),
+                                v2 =  Math.sin(dev*2);
+                        const cP = camera.position,
+                                cX = cP.x,
+                                cY = cP.y,
+                                cZ = cP.z;
+                        hat.position.set( x*v, y + 5*v2, z*v );
+                        bongrace.position.set( x*v, y + 5*v2, z*v );
+                        hat._target.dev = dev;
+                    } else {
+                        hat.position.set(camera.position);
+                        bongrace.position.set(camera.position);
+                        hat._target = null;
+                        bongrace._target = null;
+                    }
+
+                }
+            }
+
+
+
+       }
+        
+    </script>
+</body>
+</html>
